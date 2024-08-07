@@ -23,7 +23,7 @@ LLVMContext *CONTEXT = nullptr;
  * @param f
  * @return std::string
  */
-std::string llvm::readAnnotate(Function *f){ //取自原版ollvm项目
+std::string llvm::readAnnotate(Function *f){
     std::string annotation = "";
     /* Get annotation variable */
     GlobalVariable *glob=f->getParent()->getGlobalVariable( "llvm.global.annotations" );
@@ -33,26 +33,19 @@ std::string llvm::readAnnotate(Function *f){ //取自原版ollvm项目
             for ( unsigned i = 0; i < ca->getNumOperands(); ++i ){
                 /* Get the struct */
                 if ( ConstantStruct * structAn = dyn_cast<ConstantStruct>( ca->getOperand( i ) ) ){
-                    if ( ConstantExpr * expr = dyn_cast<ConstantExpr>( structAn->getOperand( 0 ) ) ){
-                        /*
-                         * If it's a bitcast we can check if the annotation is concerning
-                         * the current function
-                         */
-                        if ( expr->getOpcode() == Instruction::BitCast && expr->getOperand( 0 ) == f ){
-                            ConstantExpr *note = cast<ConstantExpr>( structAn->getOperand( 1 ) );
-                            /*
-                             * If it's a GetElementPtr, that means we found the variable
-                             * containing the annotations
-                             */
-                            if ( note->getOpcode() == Instruction::GetElementPtr ){
-                                if ( GlobalVariable * annoteStr = dyn_cast<GlobalVariable>( note->getOperand( 0 ) ) ){
-                                    if ( ConstantDataSequential * data = dyn_cast<ConstantDataSequential>( annoteStr->getInitializer() ) ){
-                                        if ( data->isString() ){
-                                            annotation += data->getAsString().lower() + " ";
-                                        }
+                    if (Function *target = dyn_cast<Function>(
+                        structAn->getOperand(0)->stripPointerCasts())) {
+                        //llvm::errs() << "Found ca[" + i + "] funcname: " + target->getName() + "\n";
+                        if (target->getName() == f->getName()) {
+                            if (GlobalVariable *annoVar = dyn_cast<GlobalVariable>( structAn->getOperand(1) ->stripPointerCasts())) {
+                                if (ConstantDataSequential *data = dyn_cast<ConstantDataSequential>( annoVar->getInitializer())) {
+                                    if (data->isString()) {
+                                        //llvm::errs() << "  " + data->getAsString() + "\n";
+                                        annotation += data->getAsString().str();
                                     }
                                 }
                             }
+                        
                         }
                     }
                 }
@@ -61,6 +54,7 @@ std::string llvm::readAnnotate(Function *f){ //取自原版ollvm项目
     }
     return(annotation);
 }
+
 
 /**
  * @brief 用于判断是否开启混淆
@@ -86,10 +80,12 @@ bool llvm::toObfuscate(bool flag, Function *f, std::string const &attribute) { /
     // Because .find("fla") is true for a string like "fla" or
     // "nofla"
     if (readAnnotate(f).find(attrNo) != std::string::npos) { // 是否禁止开启XXX
+        llvm::errs() << "[OLLVM] " + f->getName() + " disable(" + attr + ")\n";
         return false;
     }
     // If fla annotations
     if (readAnnotate(f).find(attr) != std::string::npos) { // 是否开启XXX
+        llvm::errs() << "[OLLVM] " + f->getName() + " enable(" + attr + ")\n";
         return true;
     }
     // If fla flag is set
