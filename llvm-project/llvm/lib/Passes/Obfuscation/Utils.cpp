@@ -79,12 +79,12 @@ bool llvm::toObfuscate(bool flag, Function *f, std::string const &attribute) { /
     // We have to check the nofla flag first
     // Because .find("fla") is true for a string like "fla" or
     // "nofla"
-    if (readAnnotate(f).find(attrNo) != std::string::npos) { // 是否禁止开启XXX
+    if (readAnnotate(f).find(attrNo) != std::string::npos || f->hasFnAttribute(attrNo)) { // 是否禁止开启XXX
         llvm::errs() << "[OLLVM] " + f->getName() + " disable(" + attr + ")\n";
         return false;
     }
     // If fla annotations
-    if (readAnnotate(f).find(attr) != std::string::npos) { // 是否开启XXX
+    if (readAnnotate(f).find(attr) != std::string::npos ||  f->hasFnAttribute(attr)) { // 是否开启XXX
         llvm::errs() << "[OLLVM] " + f->getName() + " enable(" + attr + ")\n";
         return true;
     }

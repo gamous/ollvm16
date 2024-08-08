@@ -20,17 +20,85 @@
 ```bash
 -mllvm -fla -mllvm -bcf -mllvm -bcf_prob=80 -mllvm -bcf_loop=3 -mllvm -sobf -mllvm -icall -mllvm -ibr -mllvm -igv -mllvm -sub -mllvm -sub_loop=3 -mllvm -split -mllvm -split_num=5
 ```
+# 指定函数添加方式
+
+## attr列表
+
+```
+- bcf # 虚假控制流
+- fla # 控制流平坦化
+- sub # 指令替换(add/and/sub/or/xor)
+- split # 基本块分割
+- ibr # 间接分支
+- icall # 间接调用 (call 寄存器)
+- igv # 间接全局变量
+```
+
+任意attr前面加no为关闭开关 例如`nobcf`可关闭虚假控制流
+
+## annotation
+
+gcc语法attribute annotation
+
+```c++
+void __attribute((__annotate__(("fla bcf sub")))) test(){
+//...
+}
+```
+
+clang cxx11语法attribute annotation
+
+```c++
+[[clang::annotate("fla bcf sub split icall ibr noigv")]]
+void test(){
+//...
+}
+```
+
+封装宏使用
+
+```c++
+#include "ollvm_annotation.h"
+void OBF_NONE test(){
+//...
+}
+```
+
+
+
+## attribute
+
+按照目录下 AddAttr.md文档进行修补clang代码 使attr传递到llvm层
+
+clang cxx11语法attribute
+
+```c++
+[[fla,bcf,sub,split,icall,ibr,noigv]]
+void test(){
+//...
+}
+```
+
+
+
+
+
 # 官方LLVM修补教程
-1.下载LLVM官方源码 [LLVM 16.0.6](https://github.com/llvm/llvm-project/releases/tag/llvmorg-16.0.6) 并解压<br>
-2.下载此项目, 将项目内文件替换至官方源码内<br>
+
+1.下载LLVM官方源码 [LLVM 16.0.6](https://github.com/llvm/llvm-project/releases/tag/llvmorg-16.0.6) 并解压
+
+2.下载此项目, 将项目内文件替换至官方源码内
+
 3.使用cmake创建自己需要的编译工具生成文件, 以 VisualStudio 2022 为例
+
 ```bash
 cd llvm-project
 mkdir build_vs2022
 cd build_vs2022
 cmake -G "Visual Studio 17 2022" -DCMAKE_C_FLAGS=/utf-8 -DCMAKE_CXX_FLAGS=/utf-8 -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_EH=OFF -DLLVM_ENABLE_RTTI=OFF -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_PROJECTS="clang;lld" -A x64 ../llvm
 ```
-等cmake生成出解决方案后打开build_vs2022目录内的LLVM.sln点击生成解决方案即可<br>
+等cmake生成出解决方案后打开build_vs2022目录内的LLVM.sln点击生成解决方案即可
+
 >~~(如果编译过程中有提示部分函数是private的无法调用的话把private注释即可 LLVM 16.0.6注释后正常无报错)~~
 # 修补细节
 > ...\llvm-project\llvm\lib\Passes\PassBuilder.cpp
